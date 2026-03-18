@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub Portfolio Extractor</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   TOKENS
+═══════════════════════════════════════════ */
+:root {
+  --bg-a: #0f0c29;
+  --bg-b: #1a1060;
+  --bg-c: #24243e;
+
+  --glass-bg:     rgba(255,255,255,0.07);
+  --glass-bg2:    rgba(255,255,255,0.04);
+  --glass-border: rgba(255,255,255,0.14);
+  --glass-hover:  rgba(255,255,255,0.11);
+  --glass-shine:  rgba(255,255,255,0.22);
+
+  --violet:  #a78bfa;
+  --pink:    #f472b6;
+  --cyan:    #67e8f9;
+  --emerald: #34d399;
+  --amber:   #fbbf24;
+  --rose:    #fb7185;
+  --sky:     #38bdf8;
+
+  --grad-main:   linear-gradient(135deg, #a78bfa, #f472b6);
+  --grad-cool:   linear-gradient(135deg, #67e8f9, #38bdf8);
+  --grad-warm:   linear-gradient(135deg, #fbbf24, #fb7185);
+  --grad-green:  linear-gradient(135deg, #34d399, #67e8f9);
+
+  --text:    #f1f0ff;
+  --text2:   #a9a0cc;
+  --text3:   #5e5880;
+
+  --r-sm: 10px;
+  --r:    16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
+
+  --font: 'Outfit', sans-serif;
+  --font-serif: 'Playfair Display', serif;
+
+  --shadow: 0 8px 32px rgba(0,0,0,0.35);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.5);
+  --shadow-glow-v: 0 0 40px rgba(167,139,250,0.25);
+  --shadow-glow-p: 0 0 40px rgba(244,114,182,0.2);
+}
+
+/* ═══════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--font);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+  position:relative;
+}
+
+/* ═══════════════════════════════════════════
+   ANIMATED MESH BACKGROUND
+═══════════════════════════════════════════ */
+.bg-scene{
+  position:fixed;inset:0;z-index:0;
+  background: linear-gradient(135deg, #0f0c29 0%, #1a1060 45%, #24243e 100%);
+  overflow:hidden;
+}
+.orb{
+  position:absolute;border-radius:50%;filter:blur(80px);
+  animation:drift 12s ease-in-out infinite;
+}
+.orb-1{width:600px;height:600px;background:radial-gradient(circle,rgba(167,139,250,0.35),transparent 70%);top:-200px;left:-150px;animation-delay:0s;}
+.orb-2{width:500px;height:500px;background:radial-gradient(circle,rgba(244,114,182,0.28),transparent 70%);top:30%;right:-150px;animation-delay:-4s;}
+.orb-3{width:400px;height:400px;background:radial-gradient(circle,rgba(103,232,249,0.2),transparent 70%);bottom:-100px;left:30%;animation-delay:-8s;}
+.orb-4{width:300px;height:300px;background:radial-gradient(circle,rgba(52,211,153,0.18),transparent 70%);bottom:20%;left:5%;animation-delay:-2s;}
+
+@keyframes drift{
+  0%,100%{transform:translate(0,0) scale(1);}
+  33%{transform:translate(40px,-30px) scale(1.06);}
+  66%{transform:translate(-25px,20px) scale(0.96);}
+}
+
+/* Subtle dot grid */
+.bg-scene::after{
+  content:'';position:absolute;inset:0;
+  background-image:radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size:36px 36px;
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════ */
+.page{
+  position:relative;z-index:1;
+  max-width:1180px;margin:0 auto;
+  padding:0 20px 100px;
+}
+
+/* ═══════════════════════════════════════════
+   GLASSMORPHISM UTILITY
+═══════════════════════════════════════════ */
+.glass{
+  background:var(--glass-bg);
+  backdrop-filter:blur(24px) saturate(180%);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid var(--glass-border);
+  border-radius:var(--r-lg);
+  box-shadow:var(--shadow), inset 0 1px 0 var(--glass-shine);
+}
+.glass-dark{
+  background:var(--glass-bg2);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:var(--r);
+}
+
+/* ═══════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════ */
+.header{
+  padding:52px 0 44px;
+  text-align:center;
+  animation:fadeSlide .8s cubic-bezier(.16,1,.3,1) both;
+}
+
+@keyframes fadeSlide{
+  from{opacity:0;transform:translateY(-20px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+.header-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 18px;margin-bottom:22px;
+  background:rgba(167,139,250,0.15);
+  border:1px solid rgba(167,139,250,0.3);
+  border-radius:100px;
+  font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--violet);font-weight:600;
+}
+.header-pill-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--emerald);
+  box-shadow:0 0 8px var(--emerald);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.75);}}
+
+.header-title{
+  font-family:var(--font-serif);
+  font-size:clamp(2.2rem,5.5vw,3.8rem);
+  font-weight:700;
+  line-height:1.1;
+  letter-spacing:-1px;
+  margin-bottom:14px;
+}
+.header-title .grad{
+  background:var(--grad-main);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+/* Quote */
+.header-quote{
+  font-family:var(--font-serif);
+  font-style:italic;
+  font-size:clamp(.95rem,2vw,1.15rem);
+  color:var(--text2);
+  max-width:520px;
+  margin:0 auto 28px;
+  line-height:1.6;
+  position:relative;
+  padding:0 20px;
+}
+.header-quote::before,.header-quote::after{
+  content:'"';
+  font-size:3rem;line-height:.5;
+  background:var(--grad-main);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  position:absolute;
+}
+.header-quote::before{top:4px;left:-4px;}
+.header-quote::after{content:'"';bottom:-16px;right:-4px;}
+
+/* Stats row */
+.header-stats{
+  display:inline-flex;gap:0;
+  background:rgba(255,255,255,0.05);
+  border:1px solid var(--glass-border);
+  border-radius:100px;
+  backdrop-filter:blur(12px);
+  overflow:hidden;
+  margin-top:10px;
+}
+.hstat{
+  padding:10px 28px;
+  text-align:center;
+  border-right:1px solid rgba(255,255,255,0.08);
+}
+.hstat:last-child{border-right:none;}
+.hstat-val{
+  font-size:1.5rem;font-weight:800;
+  background:var(--grad-main);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  line-height:1;
+}
+.hstat-label{font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:3px;}
+
+/* ═══════════════════════════════════════════
+   INPUT PANEL
+═══════════════════════════════════════════ */
+.input-panel{
+  padding:28px 28px 24px;
+  margin-bottom:22px;
+  animation:fadeSlide .8s .1s cubic-bezier(.16,1,.3,1) both;
+}
+
+/* Tabs */
+.tabs{display:flex;gap:6px;margin-bottom:22px;}
+.tab{
+  padding:9px 22px;border-radius:100px;
+  font-family:var(--font);font-size:13px;font-weight:600;
+  cursor:pointer;border:1px solid var(--glass-border);
+  background:transparent;color:var(--text2);
+  transition:all .2s;letter-spacing:.3px;
+}
+.tab.active{
+  background:var(--grad-main);color:#fff;
+  border-color:transparent;
+  box-shadow:0 4px 20px rgba(167,139,250,0.4);
+}
+.tab:not(.active):hover{
+  background:rgba(255,255,255,0.08);color:var(--text);
+  border-color:rgba(255,255,255,0.2);
+}
+
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* Input row */
+.single-row{display:flex;gap:10px;flex-wrap:wrap;}
+.inp-wrap{flex:1;min-width:220px;position:relative;}
+.inp-icon{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  font-size:15px;pointer-events:none;
+  background:var(--grad-main);-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;background-clip:text;
+}
+input[type=text],textarea{
+  width:100%;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:var(--r);
+  color:var(--text);
+  font-family:var(--font);font-size:13.5px;
+  outline:none;
+  transition:border-color .2s,box-shadow .2s,background .2s;
+}
+input[type=text]{padding:13px 14px 13px 42px;}
+input[type=text]:focus,textarea:focus{
+  border-color:rgba(167,139,250,0.5);
+  background:rgba(255,255,255,0.09);
+  box-shadow:0 0 0 3px rgba(167,139,250,0.15);
+}
+input[type=text]::placeholder,textarea::placeholder{color:var(--text3);}
+input.err{border-color:rgba(251,113,133,0.5);box-shadow:0 0 0 3px rgba(251,113,133,0.12);}
+textarea{
+  padding:14px;min-height:110px;resize:vertical;
+  line-height:1.9;font-size:13px;border-radius:var(--r);
+}
+
+/* Error */
+.err-msg{
+  display:none;margin-top:10px;padding:10px 14px;
+  background:rgba(251,113,133,0.08);
+  border:1px solid rgba(251,113,133,0.2);
+  border-radius:var(--r-sm);color:var(--rose);font-size:12px;
+}
+.err-msg.show{display:block;}
+
+/* Progress */
+.progress-wrap{display:none;margin-top:16px;}
+.progress-wrap.show{display:block;}
+.prog-head{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:6px;}
+.prog-track{height:4px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;}
+.prog-fill{
+  height:100%;border-radius:4px;
+  background:var(--grad-main);
+  transition:width .35s ease;width:0%;
+  box-shadow:0 0 12px rgba(167,139,250,0.6);
+}
+
+/* ═══════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:13px 24px;border-radius:var(--r);
+  font-family:var(--font);font-size:13px;font-weight:700;
+  cursor:pointer;border:none;
+  transition:all .2s;white-space:nowrap;
+}
+.btn:active{transform:scale(.97);}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
+
+.btn-primary{
+  background:var(--grad-main);color:#fff;
+  box-shadow:0 4px 24px rgba(167,139,250,0.4);
+}
+.btn-primary:hover{
+  box-shadow:0 6px 32px rgba(167,139,250,0.6);
+  transform:translateY(-1px);
+  filter:brightness(1.08);
+}
+.btn-ghost{
+  background:rgba(255,255,255,0.07);
+  border:1px solid var(--glass-border);
+  color:var(--text2);
+}
+.btn-ghost:hover{background:rgba(255,255,255,0.12);color:var(--text);border-color:rgba(255,255,255,0.22);}
+
+.btn-sm{padding:8px 16px;font-size:12px;border-radius:var(--r-sm);}
+
+.btn-export{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 18px;border-radius:100px;
+  font-size:12px;font-weight:600;cursor:pointer;
+  border:1px solid rgba(255,255,255,0.12);
+  backdrop-filter:blur(8px);transition:all .2s;
+}
+.btn-export:hover{transform:translateY(-2px);}
+.btn-csv   {background:rgba(52,211,153,0.12);color:var(--emerald);border-color:rgba(52,211,153,0.25);}
+.btn-csv:hover{background:rgba(52,211,153,0.2);box-shadow:0 4px 16px rgba(52,211,153,0.2);}
+.btn-pdf   {background:rgba(251,113,133,0.12);color:var(--rose);   border-color:rgba(251,113,133,0.25);}
+.btn-pdf:hover{background:rgba(251,113,133,0.2);box-shadow:0 4px 16px rgba(251,113,133,0.2);}
+.btn-word  {background:rgba(56,189,248,0.12);color:var(--sky);     border-color:rgba(56,189,248,0.25);}
+.btn-word:hover{background:rgba(56,189,248,0.2);box-shadow:0 4px 16px rgba(56,189,248,0.2);}
+.btn-json  {background:rgba(251,191,36,0.12);color:var(--amber);   border-color:rgba(251,191,36,0.25);}
+.btn-json:hover{background:rgba(251,191,36,0.2);box-shadow:0 4px 16px rgba(251,191,36,0.2);}
+.btn-danger{background:rgba(251,113,133,0.1);color:var(--rose);    border:1px solid rgba(251,113,133,0.2);}
+.btn-danger:hover{background:rgba(251,113,133,0.18);}
+
+/* ═══════════════════════════════════════════
+   TOOLBAR
+═══════════════════════════════════════════ */
+.toolbar{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;margin-bottom:14px;
+  animation:fadeSlide .8s .2s cubic-bezier(.16,1,.3,1) both;
+}
+.toolbar-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.toolbar-right{display:flex;gap:8px;flex-wrap:wrap;}
+
+.result-label{
+  font-size:13px;font-weight:600;color:var(--text2);
+  display:flex;align-items:center;gap:8px;
+}
+.cnt-badge{
+  background:var(--grad-main);
+  padding:2px 12px;border-radius:100px;
+  font-size:12px;font-weight:800;color:#fff;
+  box-shadow:0 2px 12px rgba(167,139,250,0.4);
+}
+
+.filter-wrap{position:relative;}
+.filter-wrap input[type=text]{padding:9px 9px 9px 34px;width:210px;font-size:12px;border-radius:100px;}
+.filter-icon{
+  position:absolute;left:11px;top:50%;transform:translateY(-50%);
+  color:var(--text3);font-size:13px;
+}
+
+/* ═══════════════════════════════════════════
+   TABLE CONTAINER
+═══════════════════════════════════════════ */
+.table-wrap{
+  animation:fadeSlide .8s .25s cubic-bezier(.16,1,.3,1) both;
+}
+.table-container{
+  padding:0;overflow:hidden;border-radius:var(--r-lg);
+  border:1px solid var(--glass-border);
+  background:rgba(255,255,255,0.04);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  box-shadow:var(--shadow-lg), inset 0 1px 0 rgba(255,255,255,0.15);
+  position:relative;
+}
+
+/* Top shine line */
+.table-container::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(167,139,250,0.6),rgba(244,114,182,0.6),transparent);
+  z-index:2;
+}
+
+.table-scroll{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+
+thead{position:sticky;top:0;z-index:1;}
+thead tr{background:rgba(15,12,41,0.7);backdrop-filter:blur(12px);}
+
+th{
+  padding:14px 16px;text-align:left;
+  font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--text3);font-weight:600;white-space:nowrap;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  cursor:pointer;user-select:none;transition:color .2s;
+}
+th:hover{color:var(--violet);}
+th.sorted{color:var(--violet);}
+th .si{margin-left:4px;opacity:.4;font-size:9px;}
+th.sorted .si{opacity:1;}
+
+tbody tr{
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  transition:background .15s;
+}
+tbody tr:nth-child(even){background:rgba(255,255,255,0.015);}
+tbody tr:hover{background:rgba(167,139,250,0.06);}
+tbody tr:last-child{border-bottom:none;}
+
+td{padding:14px 16px;vertical-align:middle;}
+
+/* ── Cells ── */
+.col-num{
+  color:var(--text3);font-size:11px;font-weight:600;width:40px;
+}
+
+.proj-name{font-weight:700;font-size:14px;color:var(--text);margin-bottom:3px;}
+.proj-sub{font-size:11px;color:var(--text3);}
+
+.link-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:100px;
+  background:rgba(103,232,249,0.08);
+  border:1px solid rgba(103,232,249,0.2);
+  color:var(--cyan);font-size:11px;font-weight:500;
+  text-decoration:none;
+  transition:all .2s;max-width:260px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
+.link-btn:hover{background:rgba(103,232,249,0.15);border-color:var(--cyan);box-shadow:0 0 16px rgba(103,232,249,0.2);}
+
+.copy-icon{
+  background:none;border:none;color:var(--text3);
+  cursor:pointer;font-size:12px;padding:4px 6px;
+  border-radius:6px;transition:color .2s,background .2s;line-height:1;
+}
+.copy-icon:hover{color:var(--violet);background:rgba(167,139,250,0.12);}
+
+/* Pills */
+.pill{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 11px;border-radius:100px;
+  font-size:12px;font-weight:600;white-space:nowrap;
+}
+.pill-stars{background:rgba(251,191,36,0.1);color:var(--amber);border:1px solid rgba(251,191,36,0.22);}
+.pill-forks{background:rgba(52,211,153,0.1);color:var(--emerald);border:1px solid rgba(52,211,153,0.2);}
+.pill-watch{background:rgba(167,139,250,0.1);color:var(--violet);border:1px solid rgba(167,139,250,0.22);}
+
+/* Topics */
+.topic-bag{display:flex;flex-wrap:wrap;gap:4px;max-width:200px;}
+.topic{
+  font-size:10px;padding:3px 8px;border-radius:100px;
+  background:rgba(244,114,182,0.1);
+  border:1px solid rgba(244,114,182,0.2);
+  color:var(--pink);font-weight:500;
+}
+.no-val{color:var(--text3);font-size:12px;font-style:italic;}
+
+/* Status */
+.sbadge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:600;padding:4px 11px;border-radius:100px;
+}
+.sbadge-ok{background:rgba(52,211,153,0.1);color:var(--emerald);border:1px solid rgba(52,211,153,0.25);}
+.sbadge-err{background:rgba(251,113,133,0.1);color:var(--rose);border:1px solid rgba(251,113,133,0.25);}
+.sbadge-load{background:rgba(103,232,249,0.1);color:var(--cyan);border:1px solid rgba(103,232,249,0.2);}
+.sdot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+.sbadge-load .sdot{animation:pulseD 1s infinite;}
+@keyframes pulseD{0%,100%{opacity:1;}50%{opacity:.2;}}
+
+/* Empty state */
+.empty{text-align:center;padding:70px 20px;}
+.empty-icon{font-size:52px;margin-bottom:16px;opacity:.25;}
+.empty h3{font-size:16px;font-weight:700;color:var(--text2);margin-bottom:6px;}
+.empty p{font-size:13px;color:var(--text3);line-height:1.6;}
+
+/* ── Spinner ── */
+.spin{
+  display:inline-block;width:13px;height:13px;
+  border:2px solid rgba(255,255,255,.15);border-top-color:currentColor;
+  border-radius:50%;animation:rot .6s linear infinite;
+}
+@keyframes rot{to{transform:rotate(360deg);}}
+
+/* ═══════════════════════════════════════════
+   EXPORT BAR
+═══════════════════════════════════════════ */
+.export-bar{
+  display:none;align-items:center;flex-wrap:wrap;gap:10px;
+  padding:18px 20px;
+  border-top:1px solid rgba(255,255,255,0.07);
+  background:rgba(255,255,255,0.02);
+}
+.export-bar.show{display:flex;}
+.export-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);}
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+#toast{
+  position:fixed;bottom:28px;right:28px;
+  padding:13px 18px;border-radius:var(--r);
+  font-size:13px;font-weight:500;color:var(--text);
+  display:flex;align-items:center;gap:10px;
+  z-index:9999;
+  transform:translateY(80px);opacity:0;
+  transition:all .35s cubic-bezier(.34,1.56,.64,1);
+  max-width:320px;
+  backdrop-filter:blur(20px);
+  background:rgba(30,20,60,0.85);
+  border:1px solid rgba(255,255,255,0.14);
+  box-shadow:0 12px 40px rgba(0,0,0,0.5);
+}
+#toast.show{transform:translateY(0);opacity:1;}
+
+/* ═══════════════════════════════════════════
+   FOOTER WATERMARK
+═══════════════════════════════════════════ */
+.footer{
+  text-align:center;margin-top:48px;
+  font-size:12px;color:var(--text3);
+  animation:fadeSlide .8s .4s both;
+}
+.footer span{
+  background:var(--grad-main);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  font-weight:700;
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════ */
+@media(max-width:700px){
+  .header-stats{display:none;}
+  .filter-wrap input[type=text]{width:150px;}
+  .single-row{flex-direction:column;}
+  .tabs{flex-wrap:wrap;}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-scene">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="orb orb-4"></div>
+</div>
+
+<div id="toast" aria-live="polite"></div>
+
+<div class="page">
+
+  <!-- ══ HEADER ══ -->
+  <header class="header">
+    <div class="header-pill">
+      <span class="header-pill-dot"></span>
+      GitHub Portfolio Extractor
+    </div>
+
+    <h1 class="header-title">
+      Your Repos.<br>
+      <span class="grad">Beautifully Organised.</span>
+    </h1>
+
+    <p class="header-quote">
+      Code is like humor. When you have to explain it, it's bad.
+      <br><small style="font-size:.8em;opacity:.6;font-style:normal">— Cory House</small>
+    </p>
+
+    <div class="header-stats">
+      <div class="hstat">
+        <div class="hstat-val" id="hs-total">0</div>
+        <div class="hstat-label">Repos</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-val" id="hs-ok">0</div>
+        <div class="hstat-label">Fetched</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-val" id="hs-stars">0</div>
+        <div class="hstat-label">Total ⭐</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══ INPUT PANEL ══ -->
+  <div class="glass input-panel">
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('single')">＋ &nbsp;Single URL</button>
+      <button class="tab" onclick="switchTab('bulk')">⏎ &nbsp;Bulk Paste</button>
+    </div>
+
+    <!-- Single -->
+    <div class="tab-pane active" id="pane-single">
+      <div class="single-row">
+        <div class="inp-wrap">
+          <span class="inp-icon">🔗</span>
+          <input type="text" id="singleUrl" placeholder="https://github.com/username/repository-name" />
+        </div>
+        <button class="btn btn-primary" onclick="addSingle()" id="singleBtn">
+          <span id="sbtnTxt">⚡ Extract</span>
+          <span class="spin" id="sbtnSpin" style="display:none"></span>
+        </button>
+      </div>
+      <div class="err-msg" id="singleErr"></div>
+    </div>
+
+    <!-- Bulk -->
+    <div class="tab-pane" id="pane-bulk">
+      <textarea id="bulkUrls" placeholder="Paste multiple GitHub URLs — one per line:&#10;&#10;https://github.com/user/project-one&#10;https://github.com/user/project-two&#10;https://github.com/another-user/awesome-repo"></textarea>
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="addBulk()" id="bulkBtn">
+          <span id="bbtnTxt">⚡ Extract All</span>
+          <span class="spin" id="bbtnSpin" style="display:none"></span>
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('bulkUrls').value=''">Clear</button>
+      </div>
+      <div class="err-msg" id="bulkErr"></div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="prog-head">
+        <span id="prog-label">Fetching from GitHub API…</span>
+        <span id="prog-pct">0 / 0</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- ══ TOOLBAR ══ -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <span class="result-label">
+        Results
+        <span class="cnt-badge" id="row-count">0</span>
+      </span>
+      <div class="filter-wrap">
+        <span class="filter-icon">🔍</span>
+        <input type="text" id="filterInput" placeholder="Search title, user, topic…" oninput="applyFilter()">
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn btn-ghost btn-sm" onclick="clearAll()">🗑 Clear All</button>
+    </div>
+  </div>
+
+  <!-- ══ TABLE ══ -->
+  <div class="table-wrap">
+    <div class="table-container">
+      <div class="table-scroll">
+        <table id="mainTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th onclick="sortBy('title')" id="th-title">Project Title <span class="si">↕</span></th>
+              <th>Live Link</th>
+              <th onclick="sortBy('stars')"    id="th-stars">Stars <span class="si">↕</span></th>
+              <th onclick="sortBy('forks')"    id="th-forks">Forks <span class="si">↕</span></th>
+              <th onclick="sortBy('watchers')" id="th-watchers">Watchers <span class="si">↕</span></th>
+              <th>Topics</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Export bar -->
+      <div class="export-bar" id="exportBar">
+        <span class="export-label">Export →</span>
+        <button class="btn-export btn-csv"  onclick="exportCSV()">📗 CSV</button>
+        <button class="btn-export btn-pdf"  onclick="exportPDF()">📕 PDF</button>
+        <button class="btn-export btn-word" onclick="exportWord()">📘 Word</button>
+        <button class="btn-export btn-json" onclick="exportJSON()">📙 JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Built with ❤️ using <span>GitHub API</span> · All data pulled live from repositories
+  </div>
+
+</div><!-- /page -->
+
+<script>
+/* ════════════════════════════════
+   STATE
+════════════════════════════════ */
+let repos   = JSON.parse(localStorage.getItem('ghBulkV2') || '[]');
+let filtered = [...repos];
+let sortCol  = null, sortDir = -1;
+let busy     = false;
+
+/* ════════════════════════════════
+   PARSE
+════════════════════════════════ */
+function parseURL(raw) {
+  const u = (raw || '').trim().replace(/\/$/, '');
+  const m = u.match(/^https?:\/\/github\.com\/([a-zA-Z0-9\-_.]+)\/([a-zA-Z0-9\-_.]+?)(?:\.git)?(?:[#?].*)?$/i);
+  return m ? { username: m[1], repo: m[2] } : null;
+}
+function toTitle(repo) {
+  return repo.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+function isDupe(u, r) { return repos.some(x => x.username === u && x.repo === r); }
+function fmt(n) { if (n == null) return '—'; return n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n); }
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ════════════════════════════════
+   FETCH
+════════════════════════════════ */
+async function fetchRepo(username, repo) {
+  try {
+    const r = await fetch(`https://api.github.com/repos/${username}/${repo}`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    return {
+      stars:    d.stargazers_count  ?? 0,
+      forks:    d.forks_count       ?? 0,
+      watchers: d.subscribers_count ?? 0,
+      lang:     d.language          || '',
+      desc:     d.description       || '',
+      topics:   d.topics            || [],
+    };
+  } catch { return null; }
+}
+
+/* ════════════════════════════════
+   ADD SINGLE
+════════════════════════════════ */
+async function addSingle() {
+  if (busy) return;
+  const val = document.getElementById('singleUrl').value.trim();
+  const errDiv = document.getElementById('singleErr');
+  errDiv.classList.remove('show');
+  document.getElementById('singleUrl').classList.remove('err');
+
+  const p = parseURL(val);
+  if (!p) {
+    errDiv.textContent = '⚠ Invalid URL. Expected: https://github.com/username/repo-name';
+    errDiv.classList.add('show');
+    document.getElementById('singleUrl').classList.add('err');
+    return;
+  }
+  if (isDupe(p.username, p.repo)) { toast('Already in the list!', '#fbbf24'); return; }
+
+  setBusy(true, 'single');
+  const entry = makeEntry(p.username, p.repo, 'loading');
+  repos.unshift(entry); render();
+
+  const data = await fetchRepo(p.username, p.repo);
+  Object.assign(entry, data ? { ...data, status:'ok' } : { status:'error' });
+  save(); render();
+  setBusy(false, 'single');
+  toast(data ? `✨ ${entry.title} extracted!` : '⚠ API unavailable — repo may be private', data ? '#34d399' : '#fb7185');
+  document.getElementById('singleUrl').value = '';
+}
+
+/* ════════════════════════════════
+   ADD BULK
+════════════════════════════════ */
+async function addBulk() {
+  if (busy) return;
+  const raw   = document.getElementById('bulkUrls').value;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  const errDiv = document.getElementById('bulkErr');
+  errDiv.classList.remove('show');
+
+  const toProcess=[], invalid=[], dupes=[];
+  for (const line of lines) {
+    const p = parseURL(line);
+    if (!p) { invalid.push(line); continue; }
+    if (isDupe(p.username, p.repo)) { dupes.push(`${p.username}/${p.repo}`); continue; }
+    toProcess.push(p);
+  }
+
+  const msgs=[];
+  if (invalid.length) msgs.push(`${invalid.length} invalid URL(s) skipped`);
+  if (dupes.length)   msgs.push(`${dupes.length} duplicate(s) skipped`);
+  if (msgs.length) { errDiv.textContent='⚠ '+msgs.join(' · '); errDiv.classList.add('show'); }
+  if (!toProcess.length) { toast('Nothing new to add', '#fbbf24'); return; }
+
+  setBusy(true,'bulk');
+  const entries = toProcess.map(p => {
+    const e = makeEntry(p.username, p.repo, 'loading');
+    repos.unshift(e); return e;
+  });
+  render();
+
+  const pw = document.getElementById('progressWrap');
+  const pf = document.getElementById('prog-fill');
+  const pl = document.getElementById('prog-label');
+  const pp = document.getElementById('prog-pct');
+  pw.classList.add('show');
+  let done = 0;
+
+  for (let i=0;i<entries.length;i+=3) {
+    const batch = entries.slice(i,i+3);
+    await Promise.all(batch.map(async e => {
+      const data = await fetchRepo(e.username, e.repo);
+      Object.assign(e, data ? {...data,status:'ok'} : {status:'error'});
+      done++;
+      const pct = Math.round((done/entries.length)*100);
+      pf.style.width = pct+'%';
+      pp.textContent = `${done} / ${entries.length}`;
+      pl.textContent = `Fetched: ${e.title}`;
+      render();
+    }));
+  }
+
+  save(); render();
+  pw.classList.remove('show'); pf.style.width='0%';
+  setBusy(false,'bulk');
+  document.getElementById('bulkUrls').value='';
+  toast(`✅ ${done} repo(s) extracted!`, '#34d399');
+}
+
+/* ════════════════════════════════
+   BUSY STATE
+════════════════════════════════ */
+function setBusy(on, which) {
+  busy = on;
+  if (which==='single') {
+    document.getElementById('sbtnTxt').style.display  = on ? 'none':'';
+    document.getElementById('sbtnSpin').style.display = on ? 'inline-block':'none';
+    document.getElementById('singleBtn').disabled = on;
+  } else {
+    document.getElementById('bbtnTxt').style.display  = on ? 'none':'';
+    document.getElementById('bbtnSpin').style.display = on ? 'inline-block':'none';
+    document.getElementById('bulkBtn').disabled = on;
+  }
+}
+
+/* ════════════════════════════════
+   HELPERS
+════════════════════════════════ */
+function makeEntry(username, repo, status) {
+  return {
+    id: Date.now() + Math.random(),
+    username, repo,
+    title: toTitle(repo),
+    liveLink: `https://${username}.github.io/${repo}/`,
+    stars:null, forks:null, watchers:null,
+    lang:'', desc:'', topics:[], status,
+  };
+}
+function removeEntry(id) {
+  repos = repos.filter(r => r.id !== id);
+  save(); render(); toast('Removed');
+}
+function clearAll() {
+  if (!repos.length) return;
+  if (!confirm(`Remove all ${repos.length} repo(s)?`)) return;
+  repos=[]; save(); render(); toast('All cleared');
+}
+function save() { localStorage.setItem('ghBulkV2', JSON.stringify(repos)); }
+
+/* ════════════════════════════════
+   FILTER & SORT
+════════════════════════════════ */
+function applyFilter() {
+  const q = (document.getElementById('filterInput').value||'').toLowerCase();
+  filtered = repos.filter(r =>
+    r.title.toLowerCase().includes(q) ||
+    r.username.toLowerCase().includes(q) ||
+    r.repo.toLowerCase().includes(q) ||
+    (r.topics||[]).some(t=>t.toLowerCase().includes(q))
+  );
+  renderRows();
+}
+function sortBy(col) {
+  if (sortCol===col) sortDir*=-1; else { sortCol=col; sortDir=-1; }
+  document.querySelectorAll('th').forEach(t=>t.classList.remove('sorted'));
+  const th = document.getElementById('th-'+col);
+  if (th) { th.classList.add('sorted'); th.querySelector('.si').textContent = sortDir===-1?'↓':'↑'; }
+  repos.sort((a,b)=>{
+    const av=a[col]??-1, bv=b[col]??-1;
+    return typeof av==='string' ? av.localeCompare(bv)*sortDir : (av-bv)*sortDir;
+  });
+  applyFilter();
+}
+
+/* ════════════════════════════════
+   RENDER
+════════════════════════════════ */
+function render() { applyFilter(); updateStats(); }
+
+function renderRows() {
+  const tbody = document.getElementById('tableBody');
+  document.getElementById('row-count').textContent = filtered.length;
+  document.getElementById('exportBar').classList.toggle('show', repos.length > 0);
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty">
+      <div class="empty-icon">${repos.length ? '🔍' : '🛰️'}</div>
+      <h3>${repos.length ? 'No matching results' : 'No repositories yet'}</h3>
+      <p>${repos.length ? 'Try a different search term.' : 'Paste a GitHub URL above to get started.'}</p>
+    </div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((r,i) => {
+    const loading = r.status==='loading';
+    const err     = r.status==='error';
+
+    const status = loading
+      ? `<span class="sbadge sbadge-load"><span class="sdot"></span>Fetching</span>`
+      : err
+        ? `<span class="sbadge sbadge-err"><span class="sdot"></span>API Error</span>`
+        : `<span class="sbadge sbadge-ok"><span class="sdot"></span>OK</span>`;
+
+    const stars    = loading ? '<span class="spin" style="color:#fbbf24"></span>' : `<span class="pill pill-stars">⭐ ${fmt(r.stars)}</span>`;
+    const forks    = loading ? '' : `<span class="pill pill-forks">🍴 ${fmt(r.forks)}</span>`;
+    const watchers = loading ? '' : `<span class="pill pill-watch">👁 ${fmt(r.watchers)}</span>`;
+
+    const topics = loading ? '' : (r.topics&&r.topics.length)
+      ? `<div class="topic-bag">${r.topics.slice(0,5).map(t=>`<span class="topic">${esc(t)}</span>`).join('')}${r.topics.length>5?`<span class="topic">+${r.topics.length-5}</span>`:''}</div>`
+      : `<span class="no-val">—</span>`;
+
+    return `<tr>
+      <td class="col-num">${i+1}</td>
+      <td>
+        <div class="proj-name">${esc(r.title)}</div>
+        <div class="proj-sub">@${esc(r.username)} / ${esc(r.repo)}</div>
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <a class="link-btn" href="${esc(r.liveLink)}" target="_blank" title="${esc(r.liveLink)}">🌐 ${esc(r.liveLink)}</a>
+          <button class="copy-icon" onclick="copyTxt('${esc(r.liveLink)}')" title="Copy">📋</button>
+        </div>
+      </td>
+      <td>${stars}</td>
+      <td>${forks}</td>
+      <td>${watchers}</td>
+      <td>${topics}</td>
+      <td>${status}</td>
+      <td><button class="btn btn-ghost btn-sm btn-danger" onclick="removeEntry(${r.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function updateStats() {
+  const ok = repos.filter(r=>r.status==='ok');
+  document.getElementById('hs-total').textContent = repos.length;
+  document.getElementById('hs-ok').textContent    = ok.length;
+  const totalStars = ok.reduce((s,r)=>s+(r.stars||0),0);
+  document.getElementById('hs-stars').textContent = totalStars>=1000 ? (totalStars/1000).toFixed(1)+'k' : totalStars;
+}
+
+/* ════════════════════════════════
+   TABS
+════════════════════════════════ */
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&name==='single')||(i===1&&name==='bulk')));
+  document.getElementById('pane-single').classList.toggle('active',name==='single');
+  document.getElementById('pane-bulk').classList.toggle('active',name==='bulk');
+}
+
+/* ════════════════════════════════
+   CLIPBOARD
+════════════════════════════════ */
+function copyTxt(txt) {
+  navigator.clipboard.writeText(txt).then(()=>toast('📋 Copied to clipboard!'));
+}
+
+/* ════════════════════════════════
+   TOAST
+════════════════════════════════ */
+let toastT;
+function toast(msg, borderColor) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = borderColor || 'rgba(255,255,255,0.14)';
+  el.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(()=>el.classList.remove('show'), 2800);
+}
+
+/* ════════════════════════════════
+   EXPORTS
+════════════════════════════════ */
+function okRepos(){ return repos.filter(r=>r.status!=='loading'); }
+
+function exportCSV(){
+  const header=['#','Title','Username','Repository','Live Link','Stars','Forks','Watchers','Topics','Language','Description'];
+  const rows=okRepos().map((r,i)=>[i+1,r.title,r.username,r.repo,r.liveLink,r.stars??'',r.forks??'',r.watchers??'',(r.topics||[]).join('; '),r.lang||'',(r.desc||'').replace(/,/g,';')]);
+  const csv=[header,...rows].map(row=>row.map(v=>`"${v}"`).join(',')).join('\n');
+  dl('github-portfolio.csv',csv,'text/csv');
+  toast('📗 CSV downloaded','#34d399');
+}
+
+function exportJSON(){
+  dl('github-portfolio.json',JSON.stringify(okRepos().map(({id,...r})=>r),null,2),'application/json');
+  toast('📙 JSON downloaded','#fbbf24');
+}
+
+function exportWord(){
+  let html=`<html><head><meta charset="utf-8"><style>
+    body{font-family:Segoe UI,sans-serif;max-width:900px;margin:auto;padding:32px;background:#fff}
+    h1{color:#7c3aed;font-size:26px;margin-bottom:4px}
+    .sub{color:#6b7280;font-size:13px;margin-bottom:24px}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th{background:#7c3aed;color:#fff;padding:10px 12px;font-size:12px;text-align:left}
+    td{padding:9px 12px;font-size:12px;border:1px solid #e5e7eb;vertical-align:top}
+    tr:nth-child(even) td{background:#f5f3ff}
+    a{color:#7c3aed;text-decoration:none}
+    .topic{display:inline-block;background:#ede9fe;color:#6d28d9;border-radius:4px;padding:1px 6px;font-size:10px;margin:1px}
+  </style></head><body>
+  <h1>🐙 GitHub Portfolio</h1>
+  <div class="sub">Generated ${new Date().toLocaleDateString('en-US',{dateStyle:'long'})} &nbsp;·&nbsp; ${okRepos().length} repositories</div>
+  <table><thead><tr><th>#</th><th>Title</th><th>User / Repo</th><th>Live Link</th><th>⭐ Stars</th><th>🍴 Forks</th><th>👁 Watchers</th><th>Topics</th><th>Language</th></tr></thead><tbody>`;
+  okRepos().forEach((r,i)=>{
+    html+=`<tr><td>${i+1}</td><td><strong>${r.title}</strong><br><small style="color:#9ca3af">${r.desc||''}</small></td><td>@${r.username}<br>${r.repo}</td><td><a href="${r.liveLink}">${r.liveLink}</a></td><td>${r.stars??'—'}</td><td>${r.forks??'—'}</td><td>${r.watchers??'—'}</td><td>${(r.topics||[]).map(t=>`<span class="topic">${t}</span>`).join(' ')||'—'}</td><td>${r.lang||'—'}</td></tr>`;
+  });
+  html+=`</tbody></table></body></html>`;
+  dl('github-portfolio.doc',html,'application/msword');
+  toast('📘 Word doc downloaded','#38bdf8');
+}
+
+async function exportPDF(){
+  toast('⏳ Building PDF…','#a78bfa');
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'l',unit:'mm',format:'a4'});
+  const data=okRepos();
+
+  // BG
+  doc.setFillColor(15,12,41); doc.rect(0,0,297,210,'F');
+  doc.setFillColor(26,16,96); doc.rect(0,0,297,26,'F');
+
+  // Header text
+  doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(167,139,250);
+  doc.text('GitHub Portfolio', 14, 16);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(169,160,204);
+  doc.text(`${new Date().toLocaleDateString('en-US',{dateStyle:'long'})}  ·  ${data.length} repositories`, 14, 22);
+
+  doc.autoTable({
+    startY:30,
+    head:[['#','Project Title','User / Repo','Live Link','⭐ Stars','🍴 Forks','👁 Watch','Topics']],
+    body:data.map((r,i)=>[
+      i+1, r.title,
+      `@${r.username}\n${r.repo}`,
+      r.liveLink,
+      r.stars??'—', r.forks??'—', r.watchers??'—',
+      (r.topics||[]).slice(0,4).join(', ')||'—'
+    ]),
+    styles:{font:'helvetica',fontSize:8.5,cellPadding:4,textColor:[241,240,255],fillColor:[20,14,55]},
+    headStyles:{fillColor:[124,58,237],textColor:[255,255,255],fontStyle:'bold',fontSize:9},
+    alternateRowStyles:{fillColor:[26,18,66]},
+    columnStyles:{
+      0:{cellWidth:10},
+      3:{textColor:[103,232,249],cellWidth:52},
+      4:{halign:'center'},5:{halign:'center'},6:{halign:'center'},
+    },
+    tableLineColor:[60,40,120],tableLineWidth:0.25,
+    theme:'grid',
+  });
+
+  doc.save('github-portfolio.pdf');
+  toast('📕 PDF downloaded','#fb7185');
+}
+
+function dl(name,content,type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=name;a.click();
+}
+
+/* ════════════════════════════════
+   KEYBOARD
+════════════════════════════════ */
+document.getElementById('singleUrl').addEventListener('keydown',e=>{if(e.key==='Enter')addSingle();});
+
+/* ════════════════════════════════
+   INIT
+════════════════════════════════ */
+render();
+</script>
+</body>
+</html>
